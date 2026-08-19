@@ -53,8 +53,8 @@
         autocomplete="off" autocapitalize="words" enterkeyhint="done">
       <button type="submit" class="btn btn-quiet">Add</button>
     </form>
-    <p class="note">The file is labelled with this name. iPhone asks which calendar to file the events under when it
-      opens them, or uses <strong>Settings › Apps › Calendar › Default Calendar</strong>.</p>
+    <p class="note">The file is labelled with this name. iPhone asks which calendar to file the events under when
+      you open it, or uses <strong>Settings › Apps › Calendar › Default Calendar</strong>.</p>
   </section>
 
   <details class="card card-details" id="options">
@@ -118,21 +118,14 @@
   </section>
 
   <details class="card card-details">
-    <summary><h2>If the events do not open</h2><span class="chev" aria-hidden="true"></span></summary>
+    <summary><h2>Getting the events onto your calendar</h2><span class="chev" aria-hidden="true"></span></summary>
     <div class="options-grid">
-      <p class="note" style="margin-top:0">
-        <strong>Add to Calendar</strong> opens the events in Safari, which hands them straight to Calendar —
-        tap <strong>Add All</strong>. This is the route to use on iPhone.
-      </p>
-      <p class="note">
-        <strong>Share instead</strong> passes the file to the share sheet, where you can pick Calendar or send the
-        list to someone else.
-      </p>
-      <p class="note">
-        <strong>Save .ics file</strong> only puts the file in Files. Tapping it there shows a preview with no way to
-        import — that is iOS, not the file. To use a saved file, long-press it in Files and choose
-        <strong>Share</strong>, or just use <strong>Add to Calendar</strong> instead.
-      </p>
+      <p class="note" style="margin-top:0"><strong>Save .ics file</strong> saves the batch to Files. Open it from
+        there and add the events — this is the route to use on iPhone.</p>
+      <p class="note"><strong>Share instead</strong> passes the same file to the share sheet, for sending the list
+        to someone else or opening it in another app.</p>
+      <p class="note">The file holds every event in the preview. Saving again after an edit makes a fresh file
+        rather than changing the old one.</p>
     </div>
   </details>
 
@@ -154,11 +147,8 @@
 </main>
 
 <div class="dock">
-  <a id="add" class="btn btn-primary" href="#" target="_blank" rel="noopener" aria-disabled="true">Add to Calendar</a>
-  <div class="dock-row" id="dock-more" hidden>
-    <button type="button" id="share" class="btn btn-quiet btn-small">Share instead</button>
-    <button type="button" id="download" class="btn btn-quiet btn-small">Save .ics file</button>
-  </div>
+  <button type="button" id="download" class="btn btn-primary" disabled>Save .ics file</button>
+  <button type="button" id="share" class="btn btn-quiet btn-small" hidden>Share instead</button>
 </div>
 
 <footer class="footer">

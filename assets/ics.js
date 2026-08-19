@@ -110,6 +110,7 @@ export function buildICS(events, { calendarName = 'Batch Calendar', alarmMinutes
     'VERSION:2.0',
     'PRODID:-//Batch Calendar//Batch Add for iPhone//EN',
     'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
     `X-WR-CALNAME:${escapeText(calendarName)}`,
   ];
   for (const event of events) lines.push(...buildEvent(event, { alarmMinutes, stamp }));

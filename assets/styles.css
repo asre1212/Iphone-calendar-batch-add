@@ -166,11 +166,7 @@ select.field { background-image: none; }
   font-weight: 600;
   border-radius: 14px;
 }
-.btn-small { font-size: 13px; background: transparent; color: var(--muted); padding: 8px 6px; }
-a.btn { display: block; text-align: center; text-decoration: none; }
-a.btn[aria-disabled="true"] { opacity: 0.4; }
-.dock-row { display: flex; gap: 8px; margin-top: 6px; }
-.dock-row .btn { flex: 1; }
+.btn-small { width: 100%; margin-top: 8px; font-size: 13px; background: transparent; color: var(--muted); padding: 6px; }
 
 /* ------------------------------------------------------------------- chips */
 

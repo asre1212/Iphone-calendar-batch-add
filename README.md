@@ -23,17 +23,14 @@ works offline once it has been added to the Home Screen.
 3. **Check the preview** — tap any event to fix the title, dates, times, location
    or notes, or to remove it. Your corrections stick even if you keep typing in
    the paste box.
-4. **Add to Calendar** — the events open in Safari, which hands them to
-   Calendar. Tap **Add All** and pick the calendar to file them under.
+4. **Save .ics file** — the batch is written to Files. Open it from there and
+   add the events, picking the calendar to file them under.
+
+**Share instead** sits under the save button and passes the same file to the
+share sheet — handy for sending a list to someone else.
 
 If iPhone drops events into the wrong calendar, set the one you want under
 **Settings › Apps › Calendar › Default Calendar**, or add one batch per calendar.
-
-Two fallbacks sit under the button. **Share instead** passes the file to the
-share sheet — useful for sending the list to someone else. **Save .ics file**
-only writes it to Files; tapping it there opens a preview with no way to import,
-which is an iOS limitation rather than a problem with the file, so use **Add to
-Calendar** unless you actually want the file.
 
 ### Lines it understands
 
@@ -79,19 +76,11 @@ attach an alert to every event in the batch.
 
 iOS gives web apps no direct access to Calendar, so the app builds a standard
 [iCalendar](https://datatracker.ietf.org/doc/html/rfc5545) (`.ics`) file — the same
-format Calendar imports from Mail. Times are written as local ("floating") times,
-so 3pm stays 3pm wherever you are.
+format Calendar imports from Mail — and saves it for you to open. Times are written
+as local ("floating") times, so 3pm stays 3pm wherever you are.
 
-Getting that file into Calendar is the fiddly part. iOS will not import a *saved*
-file: tap an `.ics` in Files and you get a preview with no import action. What it
-does open is a *response* whose `Content-Type` is `text/calendar`. So the app
-writes the file into a cache the service worker serves from, and the button is an
-ordinary link to that URL — the worker answers with the right content type and iOS
-takes it from there. The link opens outside the installed app so Safari, rather
-than the web app's own view, handles the file.
-
-That also keeps the button working with no popup blocking: the file is staged
-whenever the preview changes, so the tap is just a link.
+Each save writes a fresh file named after the chosen calendar; editing the preview
+and saving again does not change a file you already saved.
 
 ## Updates
 
@@ -121,7 +110,7 @@ npm run icons                  # re-render the PNG icons from icons/icon.svg
 | `assets/parser.js` | turns each pasted line into one or more events |
 | `assets/ics.js` | builds the `.ics` file |
 | `assets/app.js` | state, rendering, sharing, update banner |
-| `sw.js` | offline cache, update channel, and serving the staged `.ics` |
+| `sw.js` | offline cache and update channel |
 
 ## Publishing
 

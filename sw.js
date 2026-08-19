@@ -1,19 +1,13 @@
 /*
- * sw.js — offline shell, the update channel, and the calendar hand-off.
+ * sw.js — offline shell plus the update channel.
  *
  * Bump VERSION on every deploy: a new version installs alongside the old one,
  * tells the page a build is waiting, and only takes over when the user taps
  * Update (or every tab has closed).
- *
- * The hand-off matters on iOS: a saved .ics only ever opens in a Files
- * preview, but a URL answered with `Content-Type: text/calendar` is handed
- * to Calendar. The page stages the file in OUTBOX and opens its URL; the
- * fetch handler below answers with it.
  */
 
-const VERSION = '1.2.0';
+const VERSION = '1.3.0';
 const CACHE = `batch-calendar-${VERSION}`;
-const OUTBOX = 'batch-calendar-outbox';
 
 const SHELL = [
   './',
@@ -36,9 +30,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const names = await caches.keys();
-    await Promise.all(names
-      .filter((name) => name !== CACHE && name !== OUTBOX)
-      .map((name) => caches.delete(name)));
+    await Promise.all(names.filter((name) => name !== CACHE).map((name) => caches.delete(name)));
     await self.clients.claim();
   })());
 });
@@ -57,12 +49,6 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return;
 
   event.respondWith((async () => {
-    // The calendar file the page staged for this tap, served as text/calendar.
-    if (new URL(request.url).pathname.endsWith('.ics')) {
-      const staged = await (await caches.open(OUTBOX)).match(request, { ignoreSearch: true });
-      if (staged) return staged;
-    }
-
     const cache = await caches.open(CACHE);
     const cached = await cache.match(request, { ignoreSearch: true });
 
