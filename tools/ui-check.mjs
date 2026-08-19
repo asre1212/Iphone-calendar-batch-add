@@ -45,7 +45,7 @@ const previewShows = (...expected) => page.waitForFunction(
 await page.click('#sample');
 await page.waitForFunction(() => document.querySelectorAll('.event').length > 0);
 expect('example fills the preview', await page.locator('.event').count() === 8);
-expect('add button counts events', (await page.textContent('#add')).includes('Add 8 events'));
+expect('save button counts events', (await page.textContent('#download')).includes('Save 8 events'));
 
 const rows = await page.locator('.event').evaluateAll((nodes) => nodes.map((n) => n.innerText.replace(/\n/g, ' · ')));
 console.log(rows.map((r) => `        ${r}`).join('\n'));
@@ -89,13 +89,14 @@ await page.fill('#input', 'Sep 3 9am Dentist\nthis line has no date');
 await page.waitForFunction(() => document.getElementById('skipped').checkVisibility());
 expect('bad line is listed', (await page.textContent('#skipped-list')).includes('no date'));
 
-expect('secondary actions hide when there is nothing to save', await page.evaluate(async () => {
+expect('saving is offered only when there is something to save', await page.evaluate(async () => {
   const input = document.getElementById('input');
   const previous = input.value;
   input.value = '';
   input.dispatchEvent(new Event('input'));
   await new Promise((r) => setTimeout(r, 400));
-  const hidden = !document.getElementById('dock-more').checkVisibility();
+  const hidden = document.getElementById('download').disabled
+    && !document.getElementById('share').checkVisibility();
   input.value = previous;
   input.dispatchEvent(new Event('input'));
   await new Promise((r) => setTimeout(r, 400));
@@ -122,37 +123,6 @@ expect('service worker reports its version', (await page.textContent('#version')
 await page.reload({ waitUntil: 'networkidle' });
 expect('text is restored after reload', (await page.inputValue('#input')).includes('Lisbon'));
 expect('calendar choice is restored', (await page.locator('.chip-on').innerText()).startsWith('Family'));
-
-// The calendar hand-off: the button is a link to a file the worker serves as
-// text/calendar, which is the only form iOS opens in Calendar.
-await page.waitForFunction(() => document.getElementById('add').hasAttribute('data-staged'), null, { timeout: 10000 });
-const handoff = await page.evaluate(async () => {
-  const link = document.getElementById('add');
-  const response = await fetch(link.href);
-  return {
-    href: link.href,
-    target: link.target,
-    status: response.status,
-    type: response.headers.get('content-type'),
-    body: await response.text(),
-  };
-});
-expect('the link points at an .ics named after the calendar', /\/family\.ics\?/.test(handoff.href), handoff.href);
-expect('it opens outside the installed app', handoff.target === '_blank');
-expect('the worker serves it as text/calendar', handoff.status === 200 && /text\/calendar/.test(handoff.type || ''),
-  `${handoff.status} ${handoff.type}`);
-expect('and the body is the current batch', handoff.body.startsWith('BEGIN:VCALENDAR')
-  && handoff.body.split('BEGIN:VEVENT').length === 3
-  && handoff.body.includes('X-WR-CALNAME:Family'), handoff.body.slice(0, 120));
-
-// Changing the calendar restages the file under its new name.
-await page.fill('#calendar-new', 'School');
-await page.click('#calendar-form button');
-await page.waitForFunction(() => document.getElementById('add').href.includes('school.ics'), null, { timeout: 10000 });
-const restaged = await page.evaluate(async () => (await fetch(document.getElementById('add').href)).text());
-expect('restaged under the new calendar name', restaged.includes('X-WR-CALNAME:School'));
-expect('only one staged file is kept', await page.evaluate(async () =>
-  (await (await caches.open('batch-calendar-outbox')).keys()).length === 1));
 
 const swState = await page.evaluate(async () => {
   const r = await navigator.serviceWorker.getRegistration();
