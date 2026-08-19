@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Batch Calendar — paste events into iPhone Calendar</title>
+<meta name="description" content="Paste a list of dates and event names, then add them all to your iPhone calendar at once.">
+<meta name="theme-color" content="#fbfbfa" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b0b0c" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Batch Calendar">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+<link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="./assets/styles.css">
+</head>
+<body>
+
+<div id="update-banner" class="banner" hidden>
+  <span>A new version is ready.</span>
+  <button type="button" id="update-reload" class="banner-action">Update</button>
+  <button type="button" id="update-dismiss" class="banner-close" aria-label="Dismiss">&times;</button>
+</div>
+
+<header class="header">
+  <h1>Batch Calendar</h1>
+  <p class="sub">Paste your dates. Add them all at once.</p>
+</header>
+
+<main>
+  <section class="card">
+    <div class="card-head">
+      <h2>Paste your events</h2>
+      <span id="line-count" class="pill" aria-live="polite">0 lines</span>
+    </div>
+    <textarea id="input" rows="6" spellcheck="false" autocapitalize="sentences" autocomplete="off"
+      placeholder="One event per line, for example:&#10;&#10;Sep 3 9:30am Dentist&#10;12/09 School run @ Gate 4&#10;Oct 2-5 Lisbon trip&#10;2026-11-01 19:00-22:00 Dinner with Sam"></textarea>
+    <div class="row">
+      <button type="button" id="paste" class="btn btn-quiet">Paste</button>
+      <button type="button" id="sample" class="btn btn-quiet">Example</button>
+      <button type="button" id="clear" class="btn btn-quiet btn-danger">Clear</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Add to calendar</h2>
+    </div>
+    <div id="calendar-list" class="chips"></div>
+    <form id="calendar-form" class="row row-tight">
+      <input type="text" id="calendar-new" class="field" placeholder="New calendar name" maxlength="40"
+        autocomplete="off" autocapitalize="words" enterkeyhint="done">
+      <button type="submit" class="btn btn-quiet">Add</button>
+    </form>
+    <p class="note">The file is labelled with this name. When it opens, iPhone shows a calendar picker — pick the
+      matching calendar there, or set a default in <strong>Settings › Apps › Calendar › Default Calendar</strong>.</p>
+  </section>
+
+  <details class="card card-details" id="options">
+    <summary><h2>Options</h2><span class="chev" aria-hidden="true"></span></summary>
+    <div class="options-grid">
+      <label class="opt">
+        <span>Ambiguous dates like 3/4</span>
+        <select id="date-order" class="field">
+          <option value="MDY">Month first — 3 April</option>
+          <option value="DMY">Day first — 4 March</option>
+        </select>
+      </label>
+      <label class="opt">
+        <span>Default start time</span>
+        <input type="time" id="default-time" class="field" value="09:00">
+      </label>
+      <label class="opt">
+        <span>Default length</span>
+        <select id="default-duration" class="field">
+          <option value="15">15 minutes</option>
+          <option value="30">30 minutes</option>
+          <option value="60" selected>1 hour</option>
+          <option value="90">1½ hours</option>
+          <option value="120">2 hours</option>
+          <option value="480">All working day</option>
+        </select>
+      </label>
+      <label class="opt">
+        <span>Alert before</span>
+        <select id="alarm" class="field">
+          <option value="">None</option>
+          <option value="0">At time of event</option>
+          <option value="10">10 minutes</option>
+          <option value="30">30 minutes</option>
+          <option value="60">1 hour</option>
+          <option value="1440">1 day</option>
+        </select>
+      </label>
+      <label class="opt opt-switch">
+        <span>Dates with no year go forward<small>“Mar 3” means next March if it has passed</small></span>
+        <input type="checkbox" id="roll-forward" checked>
+      </label>
+    </div>
+  </details>
+
+  <section class="card" id="preview-card" hidden>
+    <div class="card-head">
+      <h2>Preview</h2>
+      <span id="event-count" class="pill" aria-live="polite"></span>
+    </div>
+    <ul id="event-list" class="events"></ul>
+    <div id="skipped" hidden>
+      <h3 class="skipped-head">Not understood</h3>
+      <ul id="skipped-list" class="skipped-list"></ul>
+      <p class="note">Add a date to these lines, or fix them here and they will re-parse.</p>
+    </div>
+  </section>
+
+  <section class="card empty" id="empty-state">
+    <p>Nothing to add yet — paste a few lines above and they will appear here, ready to check.</p>
+  </section>
+
+  <details class="card card-details">
+    <summary><h2>What it understands</h2><span class="chev" aria-hidden="true"></span></summary>
+    <ul class="formats">
+      <li><code>2026-09-03</code>, <code>3/9/2026</code>, <code>3.9.2026</code>, <code>Sep 3</code>, <code>3 September 2026</code></li>
+      <li><code>9am</code>, <code>9:30</code>, <code>14:00-15:30</code>, <code>9-5</code>, <code>noon</code></li>
+      <li><code>Oct 2-5</code> or <code>Dec 28 - Jan 3</code> for a multi-day event</li>
+      <li><code>all day</code> anywhere in the line</li>
+      <li><code>@ place</code> for a location, <code>// text</code> for notes</li>
+      <li>Tab or comma separated columns pasted from a spreadsheet</li>
+      <li>Lines starting with <code>#</code> are ignored</li>
+    </ul>
+  </details>
+</main>
+
+<div class="dock">
+  <button type="button" id="add" class="btn btn-primary" disabled>Add to Calendar</button>
+  <button type="button" id="download" class="btn btn-quiet btn-small" hidden>Save .ics file instead</button>
+</div>
+
+<footer class="footer">
+  <span id="version">—</span> · <a href="https://github.com/asre1212/Iphone-calendar-batch-add">Source</a>
+</footer>
+
+<script type="module" src="./assets/app.js"></script>
+</body>
+</html>
