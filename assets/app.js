@@ -25,7 +25,8 @@ const el = {
 const STORE = 'batch-calendar.v1';
 const SAMPLE = [
   'Sep 3 9:30am Dentist @ Highbury Clinic',
-  '12/09 School run',
+  'Oct 26,27,28 4pm Soccer practice',
+  '10/26 School run',
   'Oct 2-5 Lisbon trip',
   '2026-11-01 19:00-22:00 Dinner with Sam // book a table',
   'Nov 14 all day Marathon',

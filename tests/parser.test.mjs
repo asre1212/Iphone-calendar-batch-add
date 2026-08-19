@@ -3,10 +3,18 @@ import assert from 'node:assert/strict';
 import { parseLine, parseText } from '../assets/parser.js';
 
 const REF = new Date('2026-08-19T00:00:00');
+/** The single event a line is expected to produce. */
 const parse = (line, opts = {}) => {
+  const events = parseAll(line, opts);
+  assert.equal(events.length, 1, `expected one event from "${line}", got ${events.length}`);
+  return events[0];
+};
+
+/** Every event a line produces. */
+const parseAll = (line, opts = {}) => {
   const r = parseLine(line, { reference: REF, ...opts });
   assert.ok(r.ok, `expected "${line}" to parse (${r.reason})`);
-  return r.event;
+  return r.events;
 };
 
 test('ISO date with a 12-hour time', () => {
@@ -49,10 +57,14 @@ test('a range crossing new year rolls the end year', () => {
   assert.deepEqual([e.date, e.endDate], ['2026-12-28', '2027-01-03']);
 });
 
-test('a bare past date rolls forward to next year', () => {
-  assert.equal(parse('Mar 3 Review').date, '2027-03-03');
-  assert.equal(parse('Aug 25 Review').date, '2026-08-25');
-  assert.equal(parse('Mar 3 Review', { rollForward: false }).date, '2026-03-03');
+test('a date with no year is this year unless it has gone', () => {
+  assert.equal(parse('Aug 25 Review').date, '2026-08-25', 'still to come this year');
+  assert.equal(parse('Dec 1 Review').date, '2026-12-01');
+  assert.equal(parse('Feb 3 Ski trip').date, '2027-02-03', 'February 2026 has passed');
+  assert.equal(parse('Aug 18 Review').date, '2027-08-18', 'yesterday means next year');
+  assert.equal(parse('Aug 19 Review').date, '2026-08-19', 'today stays today');
+  assert.equal(parse('Mar 3 Review', { rollForward: false }).date, '2026-03-03', 'switched off');
+  assert.equal(parse('Feb 3 2026 Ski trip').date, '2026-02-03', 'a written year always wins');
 });
 
 test('all-day keyword, location and notes', () => {
@@ -97,4 +109,74 @@ test('custom default time and duration', () => {
 test('an event running past midnight ends the next day', () => {
   const e = parse('Sep 3 22:00-01:00 Party');
   assert.deepEqual([e.date, e.endDate, e.startTime, e.endTime], ['2026-09-03', '2026-09-04', '22:00', '01:00']);
+});
+
+test('several days on one line share the month and the title', () => {
+  const events = parseAll('Oct 26,27,28 Soccer practice');
+  assert.deepEqual(events.map((e) => e.date), ['2026-10-26', '2026-10-27', '2026-10-28']);
+  assert.deepEqual([...new Set(events.map((e) => e.title))], ['Soccer practice']);
+  assert.ok(events.every((e) => e.endDate === e.date && !e.allDay));
+});
+
+test('a numeric date carries its month across the list', () => {
+  assert.deepEqual(parseAll('10/26,27,28 Soccer').map((e) => e.date),
+    ['2026-10-26', '2026-10-27', '2026-10-28']);
+  assert.deepEqual(parseAll('26/10, 27, 28 Soccer', { dateOrder: 'DMY' }).map((e) => e.date),
+    ['2026-10-26', '2026-10-27', '2026-10-28']);
+});
+
+test('day lists accept spaces, ampersands, "and" and ordinals', () => {
+  const expected = ['2026-10-26', '2026-10-27', '2026-10-28'];
+  assert.deepEqual(parseAll('Oct 26, 27 & 28 Fair').map((e) => e.date), expected);
+  assert.deepEqual(parseAll('Oct 26th, 27th and 28th Fair').map((e) => e.date), expected);
+  assert.deepEqual(parseAll('26, 27 and 28 Oct Fair').map((e) => e.date), expected);
+});
+
+test('a time applies to every date in the list', () => {
+  const events = parseAll('Oct 26,27,28 3-4:30pm Practice @ Gym');
+  assert.equal(events.length, 3);
+  assert.ok(events.every((e) => e.startTime === '15:00' && e.endTime === '16:30' && e.location === 'Gym'));
+});
+
+test('a trailing year applies to the whole list', () => {
+  assert.deepEqual(parseAll('Oct 26, 27, 28, 2028 Soccer').map((e) => e.date),
+    ['2028-10-26', '2028-10-27', '2028-10-28']);
+});
+
+test('a comma before a year or a time is not a day list', () => {
+  assert.equal(parse('Oct 26, 2026 Dentist').date, '2026-10-26');
+  const dentist = parse('Sep 3, 4pm Dentist');
+  assert.deepEqual([dentist.date, dentist.startTime], ['2026-09-03', '16:00']);
+});
+
+test('a list wrapping into January climbs a year', () => {
+  assert.deepEqual(parseAll('Dec 30, Jan 2 Party').map((e) => e.date), ['2026-12-30', '2027-01-02']);
+});
+
+test('two full dates on one line make two events', () => {
+  assert.deepEqual(parseAll('10/26, 11/2 Two things').map((e) => e.date), ['2026-10-26', '2026-11-02']);
+  assert.deepEqual(parseAll('Oct 26 and Nov 2 Two things').map((e) => e.date), ['2026-10-26', '2026-11-02']);
+});
+
+test('a dash still means one event over several days', () => {
+  const events = parseAll('Oct 26-28 Half term');
+  assert.equal(events.length, 1);
+  assert.deepEqual([events[0].date, events[0].endDate, events[0].allDay], ['2026-10-26', '2026-10-28', true]);
+});
+
+test('a list of dates in a paste is flattened', () => {
+  const { events } = parseText('Oct 26,27,28 Soccer\nNov 3 Dentist', { reference: REF });
+  assert.equal(events.length, 4);
+  assert.deepEqual(events.map((e) => e.raw).filter((r) => r.startsWith('Oct')).length, 3);
+});
+
+test('every event gets its own id', () => {
+  const events = parseAll('Oct 26,27,28 Soccer');
+  assert.equal(new Set(events.map((e) => e.id)).size, 3);
+});
+
+test('a conjunction between two dates is not left in the title', () => {
+  assert.deepEqual([...new Set(parseAll('Meeting 3/4 and 3/5').map((e) => e.title))], ['Meeting']);
+  assert.deepEqual([...new Set(parseAll('Oct 26 & Nov 2 Party').map((e) => e.title))], ['Party']);
+  assert.equal(parse('Sep 3 Fish and chips').title, 'Fish and chips', 'a real "and" survives');
 });

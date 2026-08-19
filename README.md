@@ -16,8 +16,8 @@ works offline once it has been added to the Home Screen.
 
 ## Using it
 
-1. **Paste your events** — one per line. Anything the app cannot read is listed
-   separately so nothing disappears quietly.
+1. **Paste your events** — one per line, or several dates on one line. Anything
+   the app cannot read is listed separately so nothing disappears quietly.
 2. **Pick a calendar** — the name you choose labels the batch. Add your own names
    with the field underneath; they are remembered.
 3. **Check the preview** — tap any event to fix the title, dates, times, location
@@ -35,8 +35,13 @@ If iPhone drops events into the wrong calendar, set the one you want under
 | --- | --- |
 | `Sep 3 9:30am Dentist` | 3 September, 09:30–10:30 |
 | `2026-11-01 19:00-22:00 Dinner` | 1 November, 19:00–22:00 |
-| `12/09 School run` | 12 September (or 9 December — see Options) |
-| `Oct 2-5 Lisbon trip` | four-day all-day event |
+| `10/26 School run` | 26 October (or 10 June — see Options) |
+| **`Oct 26,27,28 Soccer`** | **three events, all in October** |
+| **`10/26,27,28 Soccer`** | **the same three days** |
+| `Oct 26 & 27`, `26, 27 and 28 Oct` | the same idea, other punctuation |
+| `Oct 26, 27, 28, 2028 Soccer` | a trailing year covers the whole list |
+| `Oct 26, Nov 2 Dentist` | two events in different months |
+| `Oct 2-5 Lisbon trip` | one four-day all-day event — a dash is a span, not a list |
 | `Dec 28 - Jan 3 Holiday` | rolls into the next year |
 | `Nov 14 all day Marathon` | all-day event |
 | `Sep 3 9-5 Workshop` | 09:00–17:00 |
@@ -44,10 +49,22 @@ If iPhone drops events into the wrong calendar, set the one you want under
 | `Sep 3 Review // bring notes` | notes: bring notes |
 | `2026-09-01<tab>Kickoff<tab>10am` | pasted straight from a spreadsheet |
 
+**Several days on one line.** Separate them with commas, `&` or `and`, and only
+the first needs the month: `Oct 26,27,28` and `10/26,27,28` both give three
+separate events sharing the title and any time on the line. A dash still means
+one event spanning the days. A comma before a year or a time is not mistaken for
+another day, so `Oct 26, 2026` and `Sep 3, 4pm` stay single events.
+
+**Years you did not write.** A date with no year is taken as this year, unless it
+has already gone — then it is next year. Entered in August 2026, `Dec 1` is
+December 2026 and `Feb 3` is February 2027, because February 2026 has passed.
+A year you do write always wins, and a list that wraps past December climbs with
+it: `Dec 30, Jan 2` gives 2026 then 2027. **Options** can switch the roll-forward
+off if you are recording dates that really are in the past.
+
 Dates written `3/4` are ambiguous, so **Options** decides whether they are read
 month-first or day-first (it starts on whichever suits your phone's language).
-Dotted dates like `1.9.2026` are always read day-first. A date with no year that
-has already passed rolls forward to next year; you can switch that off.
+Dotted dates like `1.9.2026` are always read day-first.
 
 Options also set the start time and length used when a line has no time, and can
 attach an alert to every event in the batch.
@@ -84,7 +101,7 @@ npm run icons                  # re-render the PNG icons from icons/icon.svg
 
 | File | What it does |
 | --- | --- |
-| `assets/parser.js` | turns each pasted line into an event |
+| `assets/parser.js` | turns each pasted line into one or more events |
 | `assets/ics.js` | builds the `.ics` file |
 | `assets/app.js` | state, rendering, sharing, update banner |
 | `sw.js` | offline cache and update channel |

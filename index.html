@@ -35,7 +35,7 @@
       <span id="line-count" class="pill" aria-live="polite">0 lines</span>
     </div>
     <textarea id="input" rows="6" spellcheck="false" autocapitalize="sentences" autocomplete="off"
-      placeholder="One event per line, for example:&#10;&#10;Sep 3 9:30am Dentist&#10;12/09 School run @ Gate 4&#10;Oct 2-5 Lisbon trip&#10;2026-11-01 19:00-22:00 Dinner with Sam"></textarea>
+      placeholder="One event per line, for example:&#10;&#10;Sep 3 9:30am Dentist&#10;Oct 26,27,28 Soccer practice&#10;10/26 School run @ Gate 4&#10;Oct 2-5 Lisbon trip"></textarea>
     <div class="row">
       <button type="button" id="paste" class="btn btn-quiet">Paste</button>
       <button type="button" id="sample" class="btn btn-quiet">Example</button>
@@ -94,7 +94,7 @@
         </select>
       </label>
       <label class="opt opt-switch">
-        <span>Dates with no year go forward<small>“Mar 3” means next March if it has passed</small></span>
+        <span>Dates with no year go forward<small>“Feb 3” means February 2027 once February 2026 has passed</small></span>
         <input type="checkbox" id="roll-forward" checked>
       </label>
     </div>
@@ -120,9 +120,12 @@
   <details class="card card-details">
     <summary><h2>What it understands</h2><span class="chev" aria-hidden="true"></span></summary>
     <ul class="formats">
-      <li><code>2026-09-03</code>, <code>3/9/2026</code>, <code>3.9.2026</code>, <code>Sep 3</code>, <code>3 September 2026</code></li>
+      <li><code>2026-09-03</code>, <code>10/26</code>, <code>3.9.2026</code>, <code>Sep 3</code>, <code>3 September 2026</code></li>
       <li><code>9am</code>, <code>9:30</code>, <code>14:00-15:30</code>, <code>9-5</code>, <code>noon</code></li>
-      <li><code>Oct 2-5</code> or <code>Dec 28 - Jan 3</code> for a multi-day event</li>
+      <li><code>Oct 26,27,28</code> or <code>10/26,27,28</code> — one event per day, same month</li>
+      <li><code>Oct 26 &amp; 27</code>, <code>26, 27 and 28 Oct</code> work too</li>
+      <li><code>Oct 2-5</code> or <code>Dec 28 - Jan 3</code> — a dash means one event across those days</li>
+      <li>No year written means this year, or next year if the date has passed</li>
       <li><code>all day</code> anywhere in the line</li>
       <li><code>@ place</code> for a location, <code>// text</code> for notes</li>
       <li>Tab or comma separated columns pasted from a spreadsheet</li>
