@@ -37,23 +37,46 @@ const expect = (label, ok, detail = '') => {
 
 await page.goto(base, { waitUntil: 'networkidle' });
 
+/** Wait for the preview to hold exactly these titles — counts alone can race. */
+const previewShows = (...expected) => page.waitForFunction(
+  (want) => [...document.querySelectorAll('.event-title')].map((n) => n.textContent).join('|') === want.join('|'),
+  expected, { timeout: 10000 });
+
 await page.click('#sample');
 await page.waitForFunction(() => document.querySelectorAll('.event').length > 0);
-expect('example fills the preview', await page.locator('.event').count() === 5);
-expect('add button counts events', (await page.textContent('#add')).includes('Add 5 events'));
+expect('example fills the preview', await page.locator('.event').count() === 8);
+expect('add button counts events', (await page.textContent('#add')).includes('Add 8 events'));
 
 const rows = await page.locator('.event').evaluateAll((nodes) => nodes.map((n) => n.innerText.replace(/\n/g, ' · ')));
 console.log(rows.map((r) => `        ${r}`).join('\n'));
 
+// One line with several days becomes one event per day, editable separately.
+await page.fill('#input', 'Oct 26,27,28 4pm Soccer practice');
+await previewShows('Soccer practice', 'Soccer practice', 'Soccer practice');
+const soccer = await page.locator('.event-when').evaluateAll((nodes) => nodes.map((n) => n.textContent));
+expect('three days from one line', soccer.length === 3 && soccer.every((t) => t.includes('16:00')), soccer.join(' / '));
+await page.locator('.event-head').nth(1).click();
+await page.locator('.event.open input[data-field="title"]').fill('Soccer — away');
+await page.locator('.event.open input[data-field="title"]').dispatchEvent('change');
+expect('one day of a list edits on its own', await page.evaluate(() =>
+  [...document.querySelectorAll('.event-title')].map((n) => n.textContent).join('|') === 'Soccer practice|Soccer — away|Soccer practice'));
+await page.locator('.event.open .link-danger').click();
+await page.waitForFunction(() => document.querySelectorAll('.event').length === 2);
+expect('and removes on its own', await page.evaluate(() =>
+  [...document.querySelectorAll('.event-title')].map((n) => n.textContent).join('|') === 'Soccer practice|Soccer practice'));
+
 // Open an editor while the preview holds a mix of event shapes, so the
 // grid is exercised at its widest.
+await page.fill('#input', 'Sep 3 9:30am Dentist @ Clinic\nOct 2-5 Lisbon trip');
+await previewShows('Dentist', 'Lisbon trip');
 
 await page.locator('.event-head').first().click();
 await page.locator('.event.open input[data-field="title"]').fill('Dentist — moved');
 await page.locator('.event.open input[data-field="title"]').dispatchEvent('change');
 await page.fill('#input', (await page.inputValue('#input')) + '\nDec 1 Extra event');
-await page.waitForFunction(() => document.querySelectorAll('.event').length === 6);
-expect('hand edit survives re-parse', (await page.locator('.event-title').first().textContent()) === 'Dentist — moved');
+await previewShows('Dentist — moved', 'Lisbon trip', 'Extra event');
+expect('hand edit survives re-parse', (await page.locator('.event-title').first().textContent()) === 'Dentist — moved',
+  await page.evaluate(() => [...document.querySelectorAll('.event-title')].map((n) => n.textContent).join(' | ')));
 
 // Calendar selection.
 await page.fill('#calendar-new', 'Family');
@@ -63,7 +86,7 @@ expect('new calendar is selected', (await page.locator('.chip-on').innerText()).
 
 // Unparseable lines are surfaced.
 await page.fill('#input', 'Sep 3 9am Dentist\nthis line has no date');
-await page.waitForFunction(() => !document.getElementById('skipped').hidden);
+await page.waitForFunction(() => document.getElementById('skipped').checkVisibility());
 expect('bad line is listed', (await page.textContent('#skipped-list')).includes('no date'));
 
 expect('save link hides when there is nothing to save', await page.evaluate(async () => {
@@ -81,7 +104,7 @@ expect('save link hides when there is nothing to save', await page.evaluate(asyn
 
 // The download path produces a real .ics.
 await page.fill('#input', 'Sep 3 9:30am Dentist @ Clinic\nOct 2-5 Lisbon trip');
-await page.waitForFunction(() => document.querySelectorAll('.event').length === 2);
+await previewShows('Dentist — moved', 'Lisbon trip');   // the earlier hand edit still stands
 const [download] = await Promise.all([page.waitForEvent('download'), page.click('#download')]);
 const stream = await download.createReadStream();
 const ics = await new Promise((resolve) => { let out = ''; stream.on('data', (c) => (out += c)); stream.on('end', () => resolve(out)); });
