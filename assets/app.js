@@ -18,7 +18,7 @@ const el = {
   alarm: $('alarm'), rollForward: $('roll-forward'),
   previewCard: $('preview-card'), list: $('event-list'), count: $('event-count'),
   skipped: $('skipped'), skippedList: $('skipped-list'), empty: $('empty-state'),
-  add: $('add'), download: $('download'), version: $('version'),
+  add: $('add'), share: $('share'), download: $('download'), dockMore: $('dock-more'), version: $('version'),
   banner: $('update-banner'), reload: $('update-reload'), dismiss: $('update-dismiss'),
 };
 
@@ -133,9 +133,10 @@ function paint() {
   el.count.classList.toggle('good', total > 0);
   el.previewCard.hidden = total === 0 && state.skipped.length === 0;
   el.empty.hidden = !el.previewCard.hidden;
-  el.add.disabled = total === 0;
   el.add.textContent = total ? `Add ${total} ${total === 1 ? 'event' : 'events'} to Calendar` : 'Add to Calendar';
-  el.download.hidden = total === 0;
+  el.add.setAttribute('aria-disabled', String(total === 0));
+  el.dockMore.hidden = total === 0;
+  stageCalendar();
 
   el.list.replaceChildren(...state.events.map(renderEvent));
 
@@ -245,11 +246,45 @@ function renderCalendars() {
 
 /* ---------------------------------------------------------------- delivery */
 
+const OUTBOX = 'batch-calendar-outbox';
+
 function icsForCurrentEvents() {
   return buildICS(state.events, {
     calendarName: state.calendar,
     alarmMinutes: state.options.alarm === '' ? null : Number(state.options.alarm),
   });
+}
+
+/*
+ * iOS only opens a calendar file that arrives as a text/calendar *response* —
+ * a saved .ics just sits in Files with no way in. So the file is written into
+ * a cache the service worker serves from, and the button is a plain link to
+ * it: tapping it hands the events to Calendar with no popup blocking.
+ */
+let staging = Promise.resolve();
+function stageCalendar() {
+  // Runs on every render, so keep the writes in a queue: two overlapping
+  // stagings could otherwise leave a stale batch behind for the link to serve.
+  staging = staging.then(writeStagedCalendar).catch(() => {});
+  return staging;
+}
+
+async function writeStagedCalendar() {
+  el.add.removeAttribute('data-staged');
+  if (!state.events.length || !navigator.serviceWorker?.controller) return;
+
+  const url = new URL(`./${icsFilename(state.calendar)}?v=${Date.now()}`, location.href);
+  try {
+    const cache = await caches.open(OUTBOX);
+    for (const stale of await cache.keys()) await cache.delete(stale);
+    await cache.put(url, new Response(icsForCurrentEvents(), {
+      headers: { 'Content-Type': 'text/calendar; charset=utf-8', 'Cache-Control': 'no-store' },
+    }));
+    el.add.href = url.href;
+    el.add.setAttribute('data-staged', 'true');
+  } catch {
+    // Storage refused (private mode, no quota) — the fallbacks below still work.
+  }
 }
 
 function saveFile(text, filename) {
@@ -263,7 +298,8 @@ function saveFile(text, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
 
-async function addToCalendar() {
+/** The share sheet, where Calendar is one of the destinations. */
+async function shareCalendar() {
   if (!state.events.length) return;
   const text = icsForCurrentEvents();
   const filename = icsFilename(state.calendar);
@@ -272,14 +308,13 @@ async function addToCalendar() {
   if (navigator.canShare?.({ files: [file] })) {
     try {
       await navigator.share({ files: [file], title: `${state.events.length} events` });
-      toast('Choose Calendar, then Add All');
       return;
     } catch (error) {
       if (error?.name === 'AbortError') return;   // the user closed the share sheet
     }
   }
   saveFile(text, filename);
-  toast('Saved — open the file to add the events');
+  toast('Saved to Files — open it from there');
 }
 
 /* ------------------------------------------------------------------- toast */
@@ -346,6 +381,7 @@ el.calendarForm.addEventListener('submit', (event) => {
   el.calendarNew.blur();
   save();
   renderCalendars();
+  stageCalendar();
 });
 
 const optionInputs = [
@@ -363,10 +399,18 @@ for (const [node, key, read] of optionInputs) {
   });
 }
 
-el.add.addEventListener('click', addToCalendar);
+el.add.addEventListener('click', (event) => {
+  if (!state.events.length) return event.preventDefault();
+  if (el.add.hasAttribute('data-staged')) return toast('Tap Add All in Calendar');
+  // No service worker yet (first load, or it failed) — hand over the file instead.
+  event.preventDefault();
+  shareCalendar();
+});
+
+el.share.addEventListener('click', shareCalendar);
 el.download.addEventListener('click', () => {
   saveFile(icsForCurrentEvents(), icsFilename(state.calendar));
-  toast('Saved to Files');
+  toast('Saved to Files — Add to Calendar opens it properly');
 });
 
 /* --------------------------------------------------- service worker updates */
@@ -409,6 +453,7 @@ function registerServiceWorker() {
   }).catch(() => { /* offline, or opened straight from the file system */ });
 
   el.dismiss.addEventListener('click', () => { el.banner.hidden = true; });
+  navigator.serviceWorker.ready.then(stageCalendar);
   showVersion();
 }
 

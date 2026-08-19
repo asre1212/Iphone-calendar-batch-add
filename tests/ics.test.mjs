@@ -11,6 +11,7 @@ test('wraps events in a valid calendar envelope', () => {
   assert.match(ics, /^BEGIN:VCALENDAR\r\n/);
   assert.match(ics, /\r\nEND:VCALENDAR\r\n$/);
   assert.match(ics, /VERSION:2\.0/);
+  assert.doesNotMatch(ics, /METHOD:/, 'no METHOD — the file is events to import, not a feed');
   assert.match(ics, /X-WR-CALNAME:Work/);
   assert.match(ics, /DTSTAMP:20260819T120000Z/);
   assert.equal(ics.split('BEGIN:VEVENT').length - 1, 1);
