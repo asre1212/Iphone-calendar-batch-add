@@ -53,8 +53,8 @@
         autocomplete="off" autocapitalize="words" enterkeyhint="done">
       <button type="submit" class="btn btn-quiet">Add</button>
     </form>
-    <p class="note">The file is labelled with this name. When it opens, iPhone shows a calendar picker — pick the
-      matching calendar there, or set a default in <strong>Settings › Apps › Calendar › Default Calendar</strong>.</p>
+    <p class="note">The file is labelled with this name. iPhone asks which calendar to file the events under when it
+      opens them, or uses <strong>Settings › Apps › Calendar › Default Calendar</strong>.</p>
   </section>
 
   <details class="card card-details" id="options">
@@ -118,6 +118,25 @@
   </section>
 
   <details class="card card-details">
+    <summary><h2>If the events do not open</h2><span class="chev" aria-hidden="true"></span></summary>
+    <div class="options-grid">
+      <p class="note" style="margin-top:0">
+        <strong>Add to Calendar</strong> opens the events in Safari, which hands them straight to Calendar —
+        tap <strong>Add All</strong>. This is the route to use on iPhone.
+      </p>
+      <p class="note">
+        <strong>Share instead</strong> passes the file to the share sheet, where you can pick Calendar or send the
+        list to someone else.
+      </p>
+      <p class="note">
+        <strong>Save .ics file</strong> only puts the file in Files. Tapping it there shows a preview with no way to
+        import — that is iOS, not the file. To use a saved file, long-press it in Files and choose
+        <strong>Share</strong>, or just use <strong>Add to Calendar</strong> instead.
+      </p>
+    </div>
+  </details>
+
+  <details class="card card-details">
     <summary><h2>What it understands</h2><span class="chev" aria-hidden="true"></span></summary>
     <ul class="formats">
       <li><code>2026-09-03</code>, <code>10/26</code>, <code>3.9.2026</code>, <code>Sep 3</code>, <code>3 September 2026</code></li>
@@ -135,8 +154,11 @@
 </main>
 
 <div class="dock">
-  <button type="button" id="add" class="btn btn-primary" disabled>Add to Calendar</button>
-  <button type="button" id="download" class="btn btn-quiet btn-small" hidden>Save .ics file instead</button>
+  <a id="add" class="btn btn-primary" href="#" target="_blank" rel="noopener" aria-disabled="true">Add to Calendar</a>
+  <div class="dock-row" id="dock-more" hidden>
+    <button type="button" id="share" class="btn btn-quiet btn-small">Share instead</button>
+    <button type="button" id="download" class="btn btn-quiet btn-small">Save .ics file</button>
+  </div>
 </div>
 
 <footer class="footer">
